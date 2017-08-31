@@ -1,0 +1,30 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion "26.0.0"
+
+    defaultConfig {
+        applicationId "com.swooby.obsremote"
+        minSdkVersion 19
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+}
+
+dependencies {
+    compile project(':library')
+    compile 'com.google.code.gson:gson:2.7'
+    compile files('libs/autobahn.jar')
+    compile files('libs/jackson-core-asl-1.9.7.jar')
+    compile files('libs/jackson-mapper-asl-1.9.7.jar')
+}
