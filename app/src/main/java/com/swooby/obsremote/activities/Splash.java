@@ -1,7 +1,5 @@
 package com.swooby.obsremote.activities;
 
-import java.util.ArrayList;
-
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
@@ -26,53 +24,63 @@ import com.swooby.obsremote.WebSocketService;
 import com.swooby.obsremote.WebSocketService.LocalBinder;
 import com.swooby.obsremote.messages.util.Source;
 
-public class Splash extends FragmentActivity implements RemoteUpdateListener
+import java.util.ArrayList;
+
+public class Splash
+        extends FragmentActivity
+        implements RemoteUpdateListener
 {
-	
-    private boolean busy;
-    protected boolean authRequired = false;
     public static boolean autoConnect = true;
-    public WebSocketService service;
+
+    private   boolean          busy;
+    protected boolean          authRequired;
+    public    WebSocketService service;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) 
-	{
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
-        
+
         //Remove title bar
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        
+
         setContentView(R.layout.splash);
-        
+
         //Set font for title
-        TextView headerTextView=(TextView)findViewById(R.id.splashheader);
-        Typeface typeFace=Typeface.createFromAsset(getAssets(),"fonts/neometricmedium.ttf");
+        TextView headerTextView = findViewById(R.id.splashheader);
+        Typeface typeFace = Typeface.createFromAsset(getAssets(), "fonts/neometricmedium.ttf");
         headerTextView.setTypeface(typeFace);
-        
+
         //Set hostname to saved hostname
-        EditText hostnameEdit = (EditText)findViewById(R.id.hostentry);
-        
+        EditText hostnameEdit = findViewById(R.id.hostentry);
+
         String defaultHostname = getApp().getDefaultHostname();
         hostnameEdit.setText(defaultHostname);
     }
-	
-	/** Defines callbacks for service binding, passed to bindService() */
-    private ServiceConnection mConnection = new ServiceConnection() {
+
+    /**
+     * Defines callbacks for service binding, passed to bindService()
+     */
+    private ServiceConnection mConnection = new ServiceConnection()
+    {
 
         @Override
         public void onServiceConnected(ComponentName className,
-                IBinder service) {
+                                       IBinder service)
+        {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
             LocalBinder binder = (LocalBinder) service;
             Splash.this.service = binder.getService();
             Splash.this.service.addUpdateListener(Splash.this);
-            
-            if(Splash.this.service.isConnected())
+
+            if (Splash.this.service.isConnected())
             {
-                if(Splash.this.service.needsAuth())
-                    AuthDialogFragment.startAuthentication(Splash.this,getApp(), Splash.this.service);
+                if (Splash.this.service.needsAuth())
+                {
+                    AuthDialogFragment.startAuthentication(Splash.this, getApp(), Splash.this.service);
+                }
             }
-            else if(autoConnect)
+            else if (autoConnect)
             {
                 setNotBusy();
                 defaultConnect();
@@ -80,118 +88,121 @@ public class Splash extends FragmentActivity implements RemoteUpdateListener
             }
             else
             {
-                setNotBusy();               
+                setNotBusy();
             }
         }
 
         @Override
-        public void onServiceDisconnected(ComponentName arg0) {
+        public void onServiceDisconnected(ComponentName arg0)
+        {
             Splash.this.service.removeUpdateListener(Splash.this);
             Splash.this.service = null;
-            
+
             setNotBusy();
         }
     };
-    
-	@Override
-	protected void onStart()
-	{
-	    super.onStart();
-	    /* Startup the service */
+
+    @Override
+    protected void onStart()
+    {
+        super.onStart();
+        /* Startup the service */
         Intent intent = new Intent(this, WebSocketService.class);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);	    
-	}
-	
-	@Override
-	protected void onResume()
-	{
-	    super.onResume();
-	    if(busy)
-	    {
-	        this.setBusy();
-	    }
-	}
-	
-	@Override
-    protected void onPause()
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onResume()
     {
         super.onResume();
-        if(busy)
+        if (busy)
         {
-            ImageView icon = (ImageView)findViewById(R.id.splashLogo);
+            this.setBusy();
+        }
+    }
+
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        if (busy)
+        {
+            ImageView icon = findViewById(R.id.splashLogo);
             icon.setAnimation(null);
         }
     }
-	
-	@Override
-	protected void onStop()
-	{
-	    super.onStop();
-	    if(service != null)
-            service.removeUpdateListener(this);
-	    
-	    unbindService(mConnection);
-        service = null;
-	}
-	
-	@Override
-	protected void onDestroy()
-	{
-	    super.onDestroy();
-	}
-	
-	public OBSRemoteApplication getApp()
-	{
-	    return (OBSRemoteApplication)getApplicationContext();
-	}
-	
-	public void connect(View view)
-	{
-		//Get hostname and connect
-		String hostname = ((EditText)findViewById(R.id.hostentry)).getText().toString();
-		getApp().setDefaultHostname(hostname);
-		
-		/* Get the service going */
-		service.connect();
-		
-		setBusy();
-	}
-	
-	public void defaultConnect()
-	{
-	    /* Get the service going */
-        service.connect();
-        
-        setBusy();
-	}
 
-	public void setBusy()
-	{
-	    this.busy = true;
-	    Button connectButton = (Button)findViewById(R.id.splashconnectbutton);
-	    connectButton.setVisibility(View.INVISIBLE);
-	    
-	    ProgressBar spinner = (ProgressBar)findViewById(R.id.progressBar1);
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        if (service != null)
+        {
+            service.removeUpdateListener(this);
+        }
+
+        unbindService(mConnection);
+        service = null;
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+    }
+
+    public OBSRemoteApplication getApp()
+    {
+        return (OBSRemoteApplication) getApplicationContext();
+    }
+
+    public void connect(View view)
+    {
+        //Get hostname and connect
+        String hostname = ((EditText) findViewById(R.id.hostentry)).getText().toString();
+        getApp().setDefaultHostname(hostname);
+
+		/* Get the service going */
+        service.connect();
+
+        setBusy();
+    }
+
+    public void defaultConnect()
+    {
+        /* Get the service going */
+        service.connect();
+
+        setBusy();
+    }
+
+    public void setBusy()
+    {
+        this.busy = true;
+        Button connectButton = findViewById(R.id.splashconnectbutton);
+        connectButton.setVisibility(View.INVISIBLE);
+
+        ProgressBar spinner = findViewById(R.id.progressBar1);
         spinner.setVisibility(View.VISIBLE);
-	}
-	
-	public void setNotBusy()
-	{
-	    this.busy = false;
-	    Button connectButton = (Button)findViewById(R.id.splashconnectbutton);
+    }
+
+    public void setNotBusy()
+    {
+        this.busy = false;
+        Button connectButton = findViewById(R.id.splashconnectbutton);
         connectButton.setVisibility(View.VISIBLE);
-        
-        ProgressBar spinner = (ProgressBar)findViewById(R.id.progressBar1);
+
+        ProgressBar spinner = findViewById(R.id.progressBar1);
         spinner.setVisibility(View.INVISIBLE);
-	}
-	
-	@Override
-	protected void onSaveInstanceState(Bundle outState) 
-	{
-	    //No call for super(). Bug on API Level > 11.
-	}
-	
-	@Override
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState)
+    {
+        //No call for super(). Bug on API Level > 11.
+    }
+
+    @Override
     public void onConnectionAuthenticated()
     {
         /* Startup the remote since we're ready to go */
@@ -202,14 +213,14 @@ public class Splash extends FragmentActivity implements RemoteUpdateListener
     @Override
     public void onConnectionClosed(int code, String reason)
     {
-        runOnUiThread(new Runnable() {
+        runOnUiThread(new Runnable()
+        {
 
             @Override
             public void run()
             {
                 setNotBusy();
             }
-            
         });
     }
 
@@ -223,7 +234,7 @@ public class Splash extends FragmentActivity implements RemoteUpdateListener
     public void onStreamStopping()
     {
         // Do nothing
-        
+
     }
 
     @Override
@@ -240,7 +251,7 @@ public class Splash extends FragmentActivity implements RemoteUpdateListener
 
     @Override
     public void onStreamStatusUpdate(int totalStreamTime, int fps,
-            float strain, int numDroppedFrames, int numTotalFrames, int bps)
+                                     float strain, int numDroppedFrames, int numTotalFrames, int bps)
     {
         // do nothing
     }
@@ -277,7 +288,7 @@ public class Splash extends FragmentActivity implements RemoteUpdateListener
 
     @Override
     public void onVolumeChanged(String channel, boolean finalValue,
-            float volume, boolean muted)
+                                float volume, boolean muted)
     {
         // do nothing
     }
@@ -289,15 +300,15 @@ public class Splash extends FragmentActivity implements RemoteUpdateListener
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         // 2. Chain together various setter methods to set the dialog characteristics
-        builder.setMessage("The App Version (" + WebSocketService.appVersion + ") does not match the plugin version (" + version + ")")
-               .setTitle(R.string.versionmismatch);
-        
+        builder.setMessage(
+                "The App Version (" + WebSocketService.appVersion + ") does not match the plugin version (" + version +
+                ")")
+                .setTitle(R.string.versionmismatch);
+
         builder.setPositiveButton(getString(R.string.ok), null);
 
         AlertDialog dialog = builder.create();
-        
+
         dialog.show();
     }
-    
-    
 }

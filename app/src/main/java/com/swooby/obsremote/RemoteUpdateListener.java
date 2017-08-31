@@ -1,38 +1,37 @@
 package com.swooby.obsremote;
 
-import java.util.ArrayList;
-
 import com.swooby.obsremote.messages.util.Source;
+
+import java.util.ArrayList;
 
 public interface RemoteUpdateListener
 {
-    public void onConnectionAuthenticated();
-    
-    public void onConnectionClosed(int code, String reason);
+    void onConnectionAuthenticated();
 
-    public void onStreamStarting(boolean previewOnly);
-    
-    public void onStreamStopping();
-    
-    public void onFailedAuthentication(String message);
+    void onConnectionClosed(int code, String reason);
 
-    public void onNeedsAuthentication();
+    void onStreamStarting(boolean previewOnly);
 
-    public void onStreamStatusUpdate(int totalStreamTime, int fps,
-            float strain, int numDroppedFrames, int numTotalFrames, int bps);
+    void onStreamStopping();
 
-    public void onSceneSwitch(String sceneName);
+    void onFailedAuthentication(String message);
 
-    public void onScenesChanged();
+    void onNeedsAuthentication();
 
-    public void onSourceChanged(String sourceName, Source source);
+    void onStreamStatusUpdate(int totalStreamTime, int fps,
+                              float strain, int numDroppedFrames, int numTotalFrames, int bps);
 
-    public void onSourceOrderChanged(ArrayList<String> sources);
+    void onSceneSwitch(String sceneName);
 
-    public void onRepopulateSources(ArrayList<Source> sources);
+    void onScenesChanged();
 
-    public void onVolumeChanged(String channel, boolean finalValue, float volume, boolean muted);
+    void onSourceChanged(String sourceName, Source source);
 
-    public void onVersionMismatch(float version);
+    void onSourceOrderChanged(ArrayList<String> sources);
 
+    void onRepopulateSources(ArrayList<Source> sources);
+
+    void onVolumeChanged(String channel, boolean finalValue, float volume, boolean muted);
+
+    void onVersionMismatch(float version);
 }

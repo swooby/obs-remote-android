@@ -1,9 +1,11 @@
 package com.swooby.obsremote;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import android.app.Service;
+import android.content.Intent;
+import android.os.Binder;
+import android.os.Handler;
+import android.os.IBinder;
+import android.util.Log;
 
 import com.swooby.obsremote.messages.IncomingMessage;
 import com.swooby.obsremote.messages.ResponseHandler;
@@ -17,68 +19,69 @@ import com.swooby.obsremote.messages.responses.VersionResponse;
 import com.swooby.obsremote.messages.updates.Update;
 import com.swooby.obsremote.messages.util.Source;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+
 import de.tavendo.autobahn.WebSocket;
 import de.tavendo.autobahn.WebSocketConnection;
 import de.tavendo.autobahn.WebSocketException;
 import de.tavendo.autobahn.WebSocketOptions;
 
-import android.app.Service;
-import android.content.Intent;
-import android.os.Binder;
-import android.os.Handler;
-import android.os.IBinder;
-import android.util.Log;
-
-public class WebSocketService extends Service
+public class WebSocketService
+        extends Service
 {
-    public static final float appVersion = 1.1f;
-    private static final String[] wsSubProtocols = {"obsapi"};
-    private static final String TAG = "OBSRemoteService";
+    public static final  float    appVersion     = 1.1f;
+    private static final String[] wsSubProtocols = { "obsapi" };
+    private static final String   TAG            = "OBSRemoteService";
 
     private final WebSocketConnection remoteConnection = new WebSocketConnection();
 
-    private Set<RemoteUpdateListener> listeners = new HashSet<RemoteUpdateListener>();
-    private HashMap<String, ResponseHandler> responseHandlers = new HashMap<String, ResponseHandler>();
+    private Set<RemoteUpdateListener>        listeners        = new HashSet<>();
+    private HashMap<String, ResponseHandler> responseHandlers = new HashMap<>();
 
     /* status members */
     private boolean streaming;
-    public Object previewOnly; 
-        
+    public  Object  previewOnly;
+
     private static String salted = "";
     private boolean authRequired;
     private boolean authenticated;
 
     private final Handler handler = new Handler();
-    
-    public void connect() 
+
+    public void connect()
     {
         String hostname = getApp().getDefaultHostname();
         String wsuri = "ws://" + hostname + ":4444/";
-        
-        try {
-        	if(remoteConnection.isConnected())
-        	{
-        		checkVersion();
-        	}
-        	else
-        	{
-	            remoteConnection.connect(wsuri, wsSubProtocols, 
-	                                     new WSHandler(), new WebSocketOptions(), 
-	                                     null);
-        	}
-            
-        } catch (WebSocketException e) {
+
+        try
+        {
+            if (remoteConnection.isConnected())
+            {
+                checkVersion();
+            }
+            else
+            {
+                remoteConnection.connect(wsuri, wsSubProtocols,
+                        new WSHandler(), new WebSocketOptions(),
+                        null);
+            }
+        }
+        catch (WebSocketException e)
+        {
 
             Log.d(TAG, e.toString());
         }
     }
-    
+
     public void disconnect()
     {
         remoteConnection.disconnect();
         resetState();
     }
-    
+
     private void resetState()
     {
         responseHandlers.clear();
@@ -90,72 +93,80 @@ public class WebSocketService extends Service
         authRequired = false;
         authenticated = false;
     }
-    
+
     @Override
     public void onDestroy()
     {
         super.onDestroy();
-        
+
         Log.d(TAG, "WebSocketService stopped");
         this.notifyOnClose(0, "Service destroyed");
-        
+
         listeners.clear();
         remoteConnection.disconnect();
     }
-    
+
     public OBSRemoteApplication getApp()
     {
         return (OBSRemoteApplication) getApplicationContext();
     }
-    
-    public class LocalBinder extends Binder {
-        public WebSocketService getService() {
+
+    public class LocalBinder
+            extends Binder
+    {
+        public WebSocketService getService()
+        {
             // Return this instance of WebSocketService so clients can call public methods
             return WebSocketService.this;
         }
     }
-   
+
     private boolean bound = false;
-    
+
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-    	/* if nothing is bound try connecting, else cancle any shutdowns happening */
-    	if(!bound)
-    		startShutdown();
-    	else
-    		cancelShutdown();
-        
+    public int onStartCommand(Intent intent, int flags, int startId)
+    {
+        /* if nothing is bound try connecting, else cancle any shutdowns happening */
+        if (!bound)
+        {
+            startShutdown();
+        }
+        else
+        {
+            cancelShutdown();
+        }
+
         return START_STICKY;
     }
-    
+
     @Override
     public IBinder onBind(Intent intent)
     {
         cancelShutdown();
-        
+
         bound = true;
-        
+
         // start self
         startService(new Intent(this, WebSocketService.class));
-                
+
         return new LocalBinder();
     }
-    
+
     @Override
-    public void onRebind(Intent intent) 
+    public void onRebind(Intent intent)
     {
         cancelShutdown();
     }
-    
+
     @Override
     public boolean onUnbind(Intent i)
     {
         bound = false;
-        
+
         //commented out: go ahead and shutdown while streaming
         //if(!streaming)
         startShutdown();
-        
+
         // don't want rebind
         return true;
     }
@@ -166,20 +177,21 @@ public class WebSocketService extends Service
         handler.postDelayed(delayedShutdown, 1000L * 60);
         Log.d(TAG, "Starting shutdown!");
     }
-    
-    private Runnable delayedShutdown = new Runnable() {
+
+    private Runnable delayedShutdown = new Runnable()
+    {
 
         @Override
-        public void run() {
+        public void run()
+        {
             WebSocketService.this.stopSelf();
         }
-
     };
 
     /**
      * Cancel any shutdown timer that may have been set.
      */
-    private void cancelShutdown() 
+    private void cancelShutdown()
     {
         // remove any shutdown callbacks registered
         Log.d(TAG, "Cancling shutdown!");
@@ -190,7 +202,7 @@ public class WebSocketService extends Service
     private NotificationManager notfManager;
     private static final int NOTIFICATION_ID = 2106;
     */
-    
+
     public void setStreaming(boolean newStreaming)
     {
         /*if(!this.streaming && newStreaming)
@@ -238,7 +250,7 @@ public class WebSocketService extends Service
                 startShutdown();
             }
         }*/
-        
+
         this.streaming = newStreaming;
     }
     
@@ -279,13 +291,14 @@ public class WebSocketService extends Service
         }
     }
     */
-    
+
     public boolean getStreaming()
     {
         return streaming;
     }
-    
-    private class WSHandler implements WebSocket.ConnectionHandler
+
+    private class WSHandler
+            implements WebSocket.ConnectionHandler
     {
 
         @Override
@@ -294,60 +307,62 @@ public class WebSocketService extends Service
             //Log.d(OBSRemoteApplication.TAG, "Incoming Message: " + message);
             handleIncomingMessage(message);
         }
-        
+
         @Override
         public void onOpen()
         {
             Log.d(TAG, "Status: Connected");
             checkVersion();
         }
-        
+
         @Override
         public void onClose(int code, String reason)
         {
             Log.d(TAG, "Connection lost.");
             notifyOnClose(code, reason);
         }
-        
+
         @Override
         public void onBinaryMessage(byte[] arg0)
         {
             //nothing
         }
-        
+
         @Override
         public void onRawTextMessage(byte[] arg0)
         {
             //nothing
         }
     }
-    
+
     public void sendRequest(Request request)
     {
         sendRequest(request, null);
     }
-    
+
     public void sendRequest(Request request, ResponseHandler messageHandler)
     {
         String messageJson = getApp().getGson().toJson(request);
-        
-        if(messageHandler != null)
+
+        if (messageHandler != null)
         {
             responseHandlers.put(request.messageId, messageHandler);
         }
-        
+
         remoteConnection.sendTextMessage(messageJson);
     }
-    
+
     public void handleIncomingMessage(String message)
     {
         IncomingMessage inc = getApp().getGson().fromJson(message, IncomingMessage.class);
-        if(inc == null)
-            return;
-        
-        if(inc.isUpdate())
+        if (inc == null)
         {
-            Update update = (Update)inc;
+            return;
+        }
+
+        if (inc.isUpdate())
+        {
+            Update update = (Update) inc;
 
             /* polymorphic update dispatch */
             update.dispatchUpdate(this);
@@ -355,23 +370,23 @@ public class WebSocketService extends Service
         else
         {
             //it's a response
-            Response resp = null;
+            Response resp;
             try
             {
                 resp = (Response) inc;
             }
-            catch(ClassCastException e)
+            catch (ClassCastException e)
             {
                 Log.e(TAG, "Failed to cast response.");
                 return;
             }
-            
+
             String messageId = resp.getID();
-            ResponseHandler handler = responseHandlers.get(messageId); 
-            if(handler != null)
+            ResponseHandler handler = responseHandlers.get(messageId);
+            if (handler != null)
             {
                 handler.handleResponse(resp, message);
-            } 
+            }
         }
     }
 
@@ -381,199 +396,199 @@ public class WebSocketService extends Service
         salted = s;
         authenticateWithSalted(salted);
     }
-    
+
     public void authenticate(String password)
     {
         String salt = getApp().getAuthSalt();
         getApp().getAuthChallenge();
-            
-        salted = OBSRemoteApplication.sign(password, salt);      
+
+        salted = OBSRemoteApplication.sign(password, salt);
         authenticateWithSalted(salted);
     }
-    
+
     public void authenticateWithSalted(String salted)
     {
         String challenge = getApp().getAuthChallenge();
         String hashed;
-        
-        hashed = OBSRemoteApplication.sign(salted,  challenge);
-        
-        sendRequest(new Authenticate(hashed), new ResponseHandler() {
+
+        hashed = OBSRemoteApplication.sign(salted, challenge);
+
+        sendRequest(new Authenticate(hashed), new ResponseHandler()
+        {
 
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
-                
-                if(resp.isOk())
+
+                if (resp.isOk())
                 {
                     notifyOnAuthenticated();
                 }
                 else
                 {
                     getApp().setAuthSalted("");
-                    
+
                     // try authenticating again
                     notifyOnFailedAuthentication(resp.getError());
                 }
             }
-        
         });
     }
-    
+
     private void checkVersion()
     {
         sendRequest(new GetVersion(), new ResponseHandler()
         {
-            
+
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
                 VersionResponse vResp = getApp().getGson().fromJson(jsonMessage, VersionResponse.class);
-                
-                if(vResp.version != appVersion)
+
+                if (vResp.version != appVersion)
                 {
                     /* throw a fit */
-                	Log.d(OBSRemoteApplication.TAG, "Version mismatch.");
+                    Log.d(OBSRemoteApplication.TAG, "Version mismatch.");
 
                     remoteConnection.disconnect();
-                    
+
                     notifyOnVersionMismatch(vResp.version);
                 }
                 else
                 {
-                	Log.d(OBSRemoteApplication.TAG, "Version good.");
+                    Log.d(OBSRemoteApplication.TAG, "Version good.");
                     checkAuthRequired();
                 }
             }
         });
     }
-    
+
     private void checkAuthRequired()
     {
-        sendRequest(new GetAuthRequired(), new ResponseHandler() {
+        sendRequest(new GetAuthRequired(), new ResponseHandler()
+        {
 
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
                 AuthRequiredResp authResp = getApp().getGson().fromJson(jsonMessage, AuthRequiredResp.class);
                 authRequired = authResp.authRequired;
-                               
-                if(authRequired)
+
+                if (authRequired)
                 {
                     getApp().setAuthChallenge(authResp.challenge);
-                    
-                    if(getApp().getAuthSalt().equals(authResp.salt))
-                    { 
-                       if(!salted.equals(""))
-                       {
-                           autoAuthenticate(salted);
-                       }
-                       else if(getApp().getRememberPassword() && !getApp().getAuthSalted().equals(""))
-                       {
+
+                    if (getApp().getAuthSalt().equals(authResp.salt))
+                    {
+                        if (!salted.equals(""))
+                        {
+                            autoAuthenticate(salted);
+                        }
+                        else if (getApp().getRememberPassword() && !getApp().getAuthSalted().equals(""))
+                        {
                             /* circumstances right to try auto authenticate */
                             autoAuthenticate(getApp().getAuthSalted());
-                       }
-                       else
-                       {
-                           notifyNeedsAuthentication();
-                       }
+                        }
+                        else
+                        {
+                            notifyNeedsAuthentication();
+                        }
                     }
                     else
                     {
                         /* else notify authentication needed */
                         getApp().setAuthSalt(authResp.salt);
-                        
+
                         notifyNeedsAuthentication();
                     }
-                    
                 }
                 else
                 {
                     notifyOnAuthenticated();
                 }
             }
-        
         });
     }
-    
+
     public void addUpdateListener(RemoteUpdateListener listener)
     {
         this.listeners.add(listener);
     }
-    
+
     public void removeUpdateListener(RemoteUpdateListener listener)
     {
         this.listeners.remove(listener);
     }
-    
+
     public boolean isConnected()
     {
         return this.remoteConnection.isConnected();
     }
-    
+
     /* is everything ready for normal operation */
     public boolean isReady()
     {
         return isConnected() && (!authRequired || authenticated);
     }
-    
+
     public boolean needsAuth()
     {
         return authRequired;
     }
-    
+
     public boolean authenticated()
     {
         return authenticated;
     }
+
     /* methods for updating listeners */
     private void notifyNeedsAuthentication()
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onNeedsAuthentication();
         }
     }
-    
+
     private void notifyOnAuthenticated()
     {
         this.authenticated = true;
-        
-        if(authRequired && getApp().getRememberPassword())
+
+        if (authRequired && getApp().getRememberPassword())
         {
             getApp().setAuthSalted(salted);
         }
-        
-        for(RemoteUpdateListener listener: listeners)
+
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onConnectionAuthenticated();
         }
     }
-    
+
     private void notifyOnFailedAuthentication(String message)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onFailedAuthentication(message);
         }
     }
-    
+
     private void notifyOnClose(int code, String reason)
     {
         this.resetState();
-        
-        for(RemoteUpdateListener listener: listeners)
+
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onConnectionClosed(code, reason);
         }
     }
-    
+
     public void notifyOnStreamStarting(boolean previewOnly)
     {
         this.setStreaming(true);
         this.previewOnly = true;
-        
-        for(RemoteUpdateListener listener: listeners)
+
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onStreamStarting(previewOnly);
         }
@@ -583,20 +598,20 @@ public class WebSocketService extends Service
     {
         this.setStreaming(false);
         this.previewOnly = false;
-        
-        for(RemoteUpdateListener listener: listeners)
+
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onStreamStopping();
         }
     }
 
     public void notifyStreamStatusUpdate(int totalStreamTime, int fps,
-            float strain, int numDroppedFrames, int numTotalFrames, int bps)
+                                         float strain, int numDroppedFrames, int numTotalFrames, int bps)
     {
-        
+
         //updateNotification(totalStreamTime, fps, strain, numDroppedFrames, numTotalFrames, bps);
-        
-        for(RemoteUpdateListener listener: listeners)
+
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onStreamStatusUpdate(totalStreamTime, fps, strain, numDroppedFrames, numTotalFrames, bps);
         }
@@ -604,7 +619,7 @@ public class WebSocketService extends Service
 
     public void notifyOnSceneSwitch(String sceneName)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onSceneSwitch(sceneName);
         }
@@ -612,7 +627,7 @@ public class WebSocketService extends Service
 
     public void notifyOnScenesChanged()
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onScenesChanged();
         }
@@ -620,7 +635,7 @@ public class WebSocketService extends Service
 
     public void notifySourceChange(String sourceName, Source source)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onSourceChanged(sourceName, source);
         }
@@ -628,7 +643,7 @@ public class WebSocketService extends Service
 
     public void notifySourceOrderChanged(ArrayList<String> sources)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onSourceOrderChanged(sources);
         }
@@ -636,16 +651,16 @@ public class WebSocketService extends Service
 
     public void notifyRepopulateSources(ArrayList<Source> sources)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onRepopulateSources(sources);
         }
     }
 
     public void notifyVolumeChanged(String channel, boolean finalValue,
-            float volume, boolean muted)
+                                    float volume, boolean muted)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onVolumeChanged(channel, finalValue, volume, muted);
         }
@@ -653,9 +668,9 @@ public class WebSocketService extends Service
 
     protected void notifyOnVersionMismatch(float version)
     {
-        for(RemoteUpdateListener listener: listeners)
+        for (RemoteUpdateListener listener : listeners)
         {
             listener.onVersionMismatch(version);
-        }        
+        }
     }
 }

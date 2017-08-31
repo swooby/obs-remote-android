@@ -2,10 +2,10 @@ package com.swooby.obsremote.messages.util;
 
 public class Source
 {
-    public String name;
+    public String  name;
     public boolean render;
-    public float x, cx, y, cy;
-    
+    public float   x, cx, y, cy;
+
     @Override
     public String toString()
     {
@@ -22,13 +22,15 @@ public class Source
         cx = s.cx;
         cy = s.cy;
     }
-    
+
     public boolean equals(Object o)
     {
-        if(!(o instanceof Source))
+        if (!(o instanceof Source))
+        {
             return false;
+        }
         Source os = (Source) o;
-        return name.equals(os.name) && render == os.render && 
+        return name.equals(os.name) && render == os.render &&
                x == os.x && cx == os.cx &&
                y == os.y && cy == os.cy;
     }
