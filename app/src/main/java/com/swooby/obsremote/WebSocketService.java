@@ -85,7 +85,7 @@ public class WebSocketService
     private void resetState()
     {
         responseHandlers.clear();
-        this.setStreaming(false);
+        setStreaming(false);
         previewOnly = false;
         
         /* Don't reset salted we're holding on to this for auto re-authenticate */
@@ -100,7 +100,7 @@ public class WebSocketService
         super.onDestroy();
 
         Log.d(TAG, "WebSocketService stopped");
-        this.notifyOnClose(0, "Service destroyed");
+        notifyOnClose(0, "Service destroyed");
 
         listeners.clear();
         remoteConnection.disconnect();
@@ -180,11 +180,10 @@ public class WebSocketService
 
     private Runnable delayedShutdown = new Runnable()
     {
-
         @Override
         public void run()
         {
-            WebSocketService.this.stopSelf();
+            stopSelf();
         }
     };
 
@@ -194,7 +193,7 @@ public class WebSocketService
     private void cancelShutdown()
     {
         // remove any shutdown callbacks registered
-        Log.d(TAG, "Cancling shutdown!");
+        Log.d(TAG, "Canceling shutdown!");
         handler.removeCallbacks(delayedShutdown);
     }
     
@@ -205,10 +204,9 @@ public class WebSocketService
 
     public void setStreaming(boolean newStreaming)
     {
-        /*if(!this.streaming && newStreaming)
+        /*if(!streaming && newStreaming)
         {
-            notfManager = (NotificationManager) 
-                    getSystemService(NOTIFICATION_SERVICE);
+            notfManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             
             RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.remote_notification);
             
@@ -235,13 +233,13 @@ public class WebSocketService
             // have to set this manually to deal with support library bug *facepalm*
             notification.contentView = remoteViews;
             
-            this.cancelShutdown();
+            cancelShutdown();
             
-            this.startForeground(NOTIFICATION_ID, notification);
+            startForeground(NOTIFICATION_ID, notification);
         }
-        else if(this.streaming && !newStreaming)        {
+        else if(streaming && !newStreaming)        {
             //stop foreground
-            this.stopForeground(true);
+            stopForeground(true);
             notification = null;
             
             // if we stop streaming and no activities active shutdown
@@ -251,7 +249,7 @@ public class WebSocketService
             }
         }*/
 
-        this.streaming = newStreaming;
+        streaming = newStreaming;
     }
     
     /*private long lastTimeUpdated = 0;
@@ -300,7 +298,6 @@ public class WebSocketService
     private class WSHandler
             implements WebSocket.ConnectionHandler
     {
-
         @Override
         public void onTextMessage(String message)
         {
@@ -415,7 +412,6 @@ public class WebSocketService
 
         sendRequest(new Authenticate(hashed), new ResponseHandler()
         {
-
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
@@ -439,7 +435,6 @@ public class WebSocketService
     {
         sendRequest(new GetVersion(), new ResponseHandler()
         {
-
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
@@ -467,7 +462,6 @@ public class WebSocketService
     {
         sendRequest(new GetAuthRequired(), new ResponseHandler()
         {
-
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
@@ -512,17 +506,17 @@ public class WebSocketService
 
     public void addUpdateListener(RemoteUpdateListener listener)
     {
-        this.listeners.add(listener);
+        listeners.add(listener);
     }
 
     public void removeUpdateListener(RemoteUpdateListener listener)
     {
-        this.listeners.remove(listener);
+        listeners.remove(listener);
     }
 
     public boolean isConnected()
     {
-        return this.remoteConnection.isConnected();
+        return remoteConnection.isConnected();
     }
 
     /* is everything ready for normal operation */
@@ -552,7 +546,7 @@ public class WebSocketService
 
     private void notifyOnAuthenticated()
     {
-        this.authenticated = true;
+        authenticated = true;
 
         if (authRequired && getApp().getRememberPassword())
         {
@@ -575,7 +569,7 @@ public class WebSocketService
 
     private void notifyOnClose(int code, String reason)
     {
-        this.resetState();
+        resetState();
 
         for (RemoteUpdateListener listener : listeners)
         {
@@ -585,8 +579,9 @@ public class WebSocketService
 
     public void notifyOnStreamStarting(boolean previewOnly)
     {
-        this.setStreaming(true);
-        this.previewOnly = true;
+        setStreaming(true);
+
+        this.previewOnly = previewOnly;
 
         for (RemoteUpdateListener listener : listeners)
         {
@@ -596,7 +591,8 @@ public class WebSocketService
 
     public void notifyOnStreamStopping()
     {
-        this.setStreaming(false);
+        setStreaming(false);
+
         this.previewOnly = false;
 
         for (RemoteUpdateListener listener : listeners)
@@ -608,7 +604,6 @@ public class WebSocketService
     public void notifyStreamStatusUpdate(int totalStreamTime, int fps,
                                          float strain, int numDroppedFrames, int numTotalFrames, int bps)
     {
-
         //updateNotification(totalStreamTime, fps, strain, numDroppedFrames, numTotalFrames, bps);
 
         for (RemoteUpdateListener listener : listeners)
