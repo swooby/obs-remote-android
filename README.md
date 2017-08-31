@@ -16,7 +16,8 @@ I have not followed the standard practice of forking bilhamil's repo because:
 1) His repo contains other projects that I consider unrelated in 2017
 2) My plan w/ this code is only a temporary proof of concept that it will compile and run in Android Studio
 
-I will eventually update my fork of his repo (https://github.com/swooby/OBSRemote) and send him a Pull Request, but I wouldn't expect anyone with a project that has been dead for 4 years to accept it.  
+I will eventually update my fork of his repo (https://github.com/swooby/OBSRemote) and send him a Pull Request, but I wouldn't expect anyone with a project that has been dead for 4 years to accept it.
+
 For now I will just leave this code here, w/ the occasional update, for prosperity's sake.
 
 My actual plans are for an entirely new app written from scratch in C#/Mono/Xamarin that will run on both Android and iOS.
