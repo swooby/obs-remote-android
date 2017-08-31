@@ -19,12 +19,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+
+    packagingOptions {
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/ASL2.0'
+    }
 }
 
 dependencies {
-    compile project(':library')
     compile 'com.google.code.gson:gson:2.7'
+    compile 'com.mobeta.android.dslv:library:0.9.0'
     compile files('libs/autobahn.jar')
-    compile files('libs/jackson-core-asl-1.9.7.jar')
-    compile files('libs/jackson-mapper-asl-1.9.7.jar')
+    compile 'org.codehaus.jackson:jackson-core-asl:1.9.13-atlassian-2'
+    compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.13-atlassian-2'
 }
