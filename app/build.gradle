@@ -27,9 +27,10 @@ android {
 }
 
 dependencies {
+    compile 'com.android.support:appcompat-v7:26.0.2'
     compile 'com.google.code.gson:gson:2.7'
     compile 'com.mobeta.android.dslv:library:0.9.0'
-    compile files('libs/autobahn.jar')
-    compile 'org.codehaus.jackson:jackson-core-asl:1.9.13-atlassian-2'
-    compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.13-atlassian-2'
+    compile 'com.facebook.stetho:stetho:1.5.0'
+    compile 'com.facebook.stetho:stetho-okhttp3:1.5.0'
+    compile 'com.squareup.okhttp3:okhttp:3.8.1'
 }

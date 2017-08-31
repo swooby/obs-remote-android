@@ -16,7 +16,7 @@ import android.widget.TextView;
 import com.swooby.obsremote.OBSRemoteApplication;
 import com.swooby.obsremote.R;
 import com.swooby.obsremote.RemoteUpdateListener;
-import com.swooby.obsremote.WebSocketService;
+import com.swooby.obsremote.OBSRemoteService;
 import com.swooby.obsremote.messages.util.Source;
 
 import java.util.ArrayList;
@@ -25,16 +25,16 @@ public class AuthDialogFragment
         extends DialogFragment
         implements RemoteUpdateListener
 {
-    public WebSocketService     service;
+    public OBSRemoteService     service;
     public String               message;
     public OBSRemoteApplication app;
 
-    public static void startAuthentication(FragmentActivity fragAct, OBSRemoteApplication app, WebSocketService serv)
+    public static void startAuthentication(FragmentActivity fragAct, OBSRemoteApplication app, OBSRemoteService serv)
     {
         startAuthentication(fragAct, app, serv, null);
     }
 
-    public static void startAuthentication(FragmentActivity fragAct, OBSRemoteApplication app, WebSocketService serv, String errorMessage)
+    public static void startAuthentication(FragmentActivity fragAct, OBSRemoteApplication app, OBSRemoteService serv, String errorMessage)
     {
         AuthDialogFragment frag = new AuthDialogFragment();
         frag.message = errorMessage;

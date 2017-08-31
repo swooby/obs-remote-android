@@ -36,7 +36,7 @@
         </activity>
 
         <service
-            android:name=".WebSocketService"
+            android:name=".OBSRemoteService"
             android:exported="false"
             android:icon="@drawable/ic_launcher"
             android:label="@string/service_name">

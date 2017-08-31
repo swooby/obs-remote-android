@@ -28,8 +28,8 @@ import com.mobeta.android.dslv.DragSortListView;
 import com.swooby.obsremote.OBSRemoteApplication;
 import com.swooby.obsremote.R;
 import com.swooby.obsremote.RemoteUpdateListener;
-import com.swooby.obsremote.WebSocketService;
-import com.swooby.obsremote.WebSocketService.LocalBinder;
+import com.swooby.obsremote.OBSRemoteService;
+import com.swooby.obsremote.OBSRemoteService.LocalBinder;
 import com.swooby.obsremote.messages.ResponseHandler;
 import com.swooby.obsremote.messages.requests.GetSceneList;
 import com.swooby.obsremote.messages.requests.GetStreamingStatus;
@@ -50,7 +50,7 @@ public class Remote
         extends FragmentActivity
         implements RemoteUpdateListener
 {
-    public WebSocketService service;
+    public OBSRemoteService service;
 
     private SceneAdapter     sceneAdapter;
     private ArrayList<Scene> scenes;
@@ -109,7 +109,7 @@ public class Remote
         statsPanel.setVisibility(View.GONE);
 
         /* bind the service */
-        Intent intent = new Intent(this, WebSocketService.class);
+        Intent intent = new Intent(this, OBSRemoteService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
@@ -194,7 +194,6 @@ public class Remote
         /* Get stream status */
         service.sendRequest(new GetStreamingStatus(), new ResponseHandler()
         {
-
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
@@ -210,7 +209,6 @@ public class Remote
         /* Get scenes */
         service.sendRequest(new GetSceneList(), new ResponseHandler()
         {
-
             @Override
             public void handleResponse(Response resp, String jsonMessage)
             {
@@ -394,7 +392,7 @@ public class Remote
 
     public void updateStreaming(boolean streaming, boolean previewOnly)
     {
-        WebSocketService serv = service;
+        OBSRemoteService serv = service;
 
         serv.setStreaming(streaming);
         serv.previewOnly = previewOnly;

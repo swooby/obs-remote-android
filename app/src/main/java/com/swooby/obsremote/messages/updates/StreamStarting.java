@@ -1,6 +1,6 @@
 package com.swooby.obsremote.messages.updates;
 
-import com.swooby.obsremote.WebSocketService;
+import com.swooby.obsremote.OBSRemoteService;
 import com.google.gson.annotations.SerializedName;
 
 public class StreamStarting extends Update
@@ -9,7 +9,7 @@ public class StreamStarting extends Update
     public boolean previewOnly;
 
     @Override
-    public void dispatchUpdate(WebSocketService serv)
+    public void dispatchUpdate(OBSRemoteService serv)
     {
         serv.notifyOnStreamStarting(previewOnly);
     }

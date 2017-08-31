@@ -1,12 +1,19 @@
 package com.swooby.obsremote;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.facebook.stetho.DumperPluginsProvider;
+import com.facebook.stetho.Stetho;
+import com.facebook.stetho.Stetho.Initializer;
+import com.facebook.stetho.Stetho.InitializerBuilder;
+import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.swooby.obsremote.messages.IncomingMessage;
 import com.swooby.obsremote.messages.ResponseHandler;
 import com.swooby.obsremote.messages.requests.Authenticate;
@@ -23,20 +30,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
-import de.tavendo.autobahn.WebSocket;
-import de.tavendo.autobahn.WebSocketConnection;
-import de.tavendo.autobahn.WebSocketException;
-import de.tavendo.autobahn.WebSocketOptions;
+import okhttp3.OkHttpClient;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import okio.ByteString;
 
-public class WebSocketService
+public class OBSRemoteService
         extends Service
 {
+    private static final String TAG = "OBSRemoteService";
+
     public static final  float    appVersion     = 1.1f;
     private static final String[] wsSubProtocols = { "obsapi" };
-    private static final String   TAG            = "OBSRemoteService";
 
-    private final WebSocketConnection remoteConnection = new WebSocketConnection();
+    //private final WebSocketConnection remoteConnection = new WebSocketConnection();
+    private OkHttpClient client;
+    private WebSocket    websocket;
 
     private Set<RemoteUpdateListener>        listeners        = new HashSet<>();
     private HashMap<String, ResponseHandler> responseHandlers = new HashMap<>();
@@ -51,34 +62,98 @@ public class WebSocketService
 
     private final Handler handler = new Handler();
 
+    public static OkHttpClient initialize(@NonNull Context applicationContext)
+    {
+        OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+
+        //noinspection PointlessBooleanExpression
+        if (BuildConfig.DEBUG)
+        {
+            clientBuilder.addNetworkInterceptor(new StethoInterceptor());
+
+            DumperPluginsProvider dumperPluginsProvider = Stetho.defaultDumperPluginsProvider(applicationContext);
+
+            InitializerBuilder initializerBuilder = Stetho.newInitializerBuilder(applicationContext)
+                    .enableDumpapp(dumperPluginsProvider);
+
+        /*
+        RealmInspectorModulesProvider realmInspectorModulesProvider = RealmInspectorModulesProvider.builder(applicationContext)
+                //...
+                .build();
+        initializerBuilder.enableWebKitInspector(realmInspectorModulesProvider);
+        */
+
+            Initializer initializer = initializerBuilder.build();
+
+            // TODO:(pv) Dang singletons! What if something else has already called Stetho.initilize(…)?!?!?
+            Stetho.initialize(initializer);
+        }
+
+        // TODO:(pv) I absolutely cannot get the GzipRequestInterceptor to successfully *POST* a non-null body...
+        //  Add example of what is failing...
+        //sDefaultHttpClientBuilder.addInterceptor(new GzipRequestInterceptor());
+
+        if (true)// && BuildConfig.DEBUG)
+        {
+            clientBuilder
+                    .connectTimeout(20, TimeUnit.SECONDS)
+                    .readTimeout(20, TimeUnit.SECONDS)
+                    .writeTimeout(20, TimeUnit.SECONDS);
+        }
+
+        return clientBuilder.build();
+    }
+
     public void connect()
     {
         String hostname = getApp().getDefaultHostname();
         String wsuri = "ws://" + hostname + ":4444/";
 
-        try
+        if (true)
         {
-            if (remoteConnection.isConnected())
+            if (client == null)
             {
-                checkVersion();
+                client = initialize(getApplicationContext());
+
+                //Request request = new Request
+                okhttp3.Request request = new okhttp3.Request.Builder().url(wsuri).build();
+
+                websocket = client.newWebSocket(request, new OBSHandler());
             }
             else
             {
-                remoteConnection.connect(wsuri, wsSubProtocols,
-                        new WSHandler(), new WebSocketOptions(),
-                        null);
+                checkVersion();
             }
         }
-        catch (WebSocketException e)
+        else
         {
+            /*
+            try
+            {
+                if (remoteConnection.isConnected())
+                {
+                    checkVersion();
+                }
+                else
+                {
+                    remoteConnection.connect(wsuri, wsSubProtocols,
+                            new WSHandler(), new WebSocketOptions(),
+                            null);
+                }
+            }
+            catch (WebSocketException e)
+            {
 
-            Log.d(TAG, e.toString());
+                Log.d(TAG, e.toString());
+            }
+            */
         }
     }
 
     public void disconnect()
     {
-        remoteConnection.disconnect();
+        client.dispatcher().executorService().shutdown();
+        //remoteConnection.disconnect();
         resetState();
     }
 
@@ -103,7 +178,8 @@ public class WebSocketService
         notifyOnClose(0, "Service destroyed");
 
         listeners.clear();
-        remoteConnection.disconnect();
+        client.dispatcher().executorService().shutdown();
+        //remoteConnection.disconnect();
     }
 
     public OBSRemoteApplication getApp()
@@ -114,10 +190,10 @@ public class WebSocketService
     public class LocalBinder
             extends Binder
     {
-        public WebSocketService getService()
+        public OBSRemoteService getService()
         {
             // Return this instance of WebSocketService so clients can call public methods
-            return WebSocketService.this;
+            return OBSRemoteService.this;
         }
     }
 
@@ -147,7 +223,7 @@ public class WebSocketService
         bound = true;
 
         // start self
-        startService(new Intent(this, WebSocketService.class));
+        startService(new Intent(this, OBSRemoteService.class));
 
         return new LocalBinder();
     }
@@ -295,27 +371,100 @@ public class WebSocketService
         return streaming;
     }
 
+    private class OBSHandler
+            extends WebSocketListener
+    {
+        @Override
+        public void onOpen(WebSocket webSocket, okhttp3.Response response)
+        {
+            Log.d(TAG, "onOpen(...)");
+            handler.post(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    checkVersion();
+                }
+            });
+        }
+
+        @Override
+        public void onMessage(WebSocket webSocket, final String text)
+        {
+            Log.d(TAG, "onMessage(..., text:" + text + ")");
+            handler.post(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    handleIncomingMessage(text);
+                }
+            });
+        }
+
+        @Override
+        public void onMessage(WebSocket webSocket, ByteString bytes)
+        {
+            Log.d(TAG, "onMessage(..., bytes:" + bytes + ")");
+        }
+
+        @Override
+        public void onClosing(WebSocket webSocket, int code, String reason)
+        {
+            Log.d(TAG, "onClosing(..., code:" + code + ", reason:" + reason + ")");
+        }
+
+        @Override
+        public void onClosed(WebSocket webSocket, final int code, final String reason)
+        {
+            Log.d(TAG, "onClosed(..., code:" + code + ", reason:" + reason + ")");
+            handler.post(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    notifyOnClose(code, reason);
+                }
+            });
+        }
+
+        @Override
+        public void onFailure(WebSocket webSocket, Throwable throwable, okhttp3.Response response)
+        {
+            Log.d(TAG, "onFailure(..., throwable:" + throwable + ", response:" + response + ")");
+            handler.post(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    notifyOnClose(2, null);
+                }
+            });
+        }
+    }
+
+    /*
     private class WSHandler
             implements WebSocket.ConnectionHandler
     {
         @Override
         public void onTextMessage(String message)
         {
-            //Log.d(OBSRemoteApplication.TAG, "Incoming Message: " + message);
+            //Log.d(TAG, "IonTextMessage(message:" + message + ")");
             handleIncomingMessage(message);
         }
 
         @Override
         public void onOpen()
         {
-            Log.d(TAG, "Status: Connected");
+            Log.d(TAG, "onOpen()");
             checkVersion();
         }
 
         @Override
         public void onClose(int code, String reason)
         {
-            Log.d(TAG, "Connection lost.");
+            Log.d(TAG, "onClose(code:" + code + ", reason:" + reason + ")");
             notifyOnClose(code, reason);
         }
 
@@ -331,6 +480,7 @@ public class WebSocketService
             //nothing
         }
     }
+    */
 
     public void sendRequest(Request request)
     {
@@ -346,7 +496,8 @@ public class WebSocketService
             responseHandlers.put(request.messageId, messageHandler);
         }
 
-        remoteConnection.sendTextMessage(messageJson);
+        websocket.send(messageJson);
+        //remoteConnection.sendTextMessage(messageJson);
     }
 
     public void handleIncomingMessage(String message)
@@ -445,7 +596,8 @@ public class WebSocketService
                     /* throw a fit */
                     Log.d(OBSRemoteApplication.TAG, "Version mismatch.");
 
-                    remoteConnection.disconnect();
+                    client.dispatcher().executorService().shutdown();
+                    //remoteConnection.disconnect();
 
                     notifyOnVersionMismatch(vResp.version);
                 }
@@ -516,7 +668,7 @@ public class WebSocketService
 
     public boolean isConnected()
     {
-        return remoteConnection.isConnected();
+        return websocket != null;//remoteConnection.isConnected();
     }
 
     /* is everything ready for normal operation */
@@ -559,7 +711,7 @@ public class WebSocketService
         }
     }
 
-    private void notifyOnFailedAuthentication(String message)
+    private void notifyOnFailedAuthentication(final String message)
     {
         for (RemoteUpdateListener listener : listeners)
         {
@@ -567,7 +719,7 @@ public class WebSocketService
         }
     }
 
-    private void notifyOnClose(int code, String reason)
+    private void notifyOnClose(final int code, final String reason)
     {
         resetState();
 
@@ -577,7 +729,7 @@ public class WebSocketService
         }
     }
 
-    public void notifyOnStreamStarting(boolean previewOnly)
+    public void notifyOnStreamStarting(final boolean previewOnly)
     {
         setStreaming(true);
 
@@ -601,8 +753,8 @@ public class WebSocketService
         }
     }
 
-    public void notifyStreamStatusUpdate(int totalStreamTime, int fps,
-                                         float strain, int numDroppedFrames, int numTotalFrames, int bps)
+    public void notifyStreamStatusUpdate(final int totalStreamTime, final int fps,
+                                         final float strain, final int numDroppedFrames, final int numTotalFrames, final int bps)
     {
         //updateNotification(totalStreamTime, fps, strain, numDroppedFrames, numTotalFrames, bps);
 
@@ -612,7 +764,7 @@ public class WebSocketService
         }
     }
 
-    public void notifyOnSceneSwitch(String sceneName)
+    public void notifyOnSceneSwitch(final String sceneName)
     {
         for (RemoteUpdateListener listener : listeners)
         {
@@ -628,7 +780,7 @@ public class WebSocketService
         }
     }
 
-    public void notifySourceChange(String sourceName, Source source)
+    public void notifySourceChange(final String sourceName, final Source source)
     {
         for (RemoteUpdateListener listener : listeners)
         {
@@ -636,7 +788,7 @@ public class WebSocketService
         }
     }
 
-    public void notifySourceOrderChanged(ArrayList<String> sources)
+    public void notifySourceOrderChanged(final ArrayList<String> sources)
     {
         for (RemoteUpdateListener listener : listeners)
         {
@@ -644,7 +796,7 @@ public class WebSocketService
         }
     }
 
-    public void notifyRepopulateSources(ArrayList<Source> sources)
+    public void notifyRepopulateSources(final ArrayList<Source> sources)
     {
         for (RemoteUpdateListener listener : listeners)
         {
@@ -652,8 +804,8 @@ public class WebSocketService
         }
     }
 
-    public void notifyVolumeChanged(String channel, boolean finalValue,
-                                    float volume, boolean muted)
+    public void notifyVolumeChanged(final String channel, final boolean finalValue,
+                                    final float volume, final boolean muted)
     {
         for (RemoteUpdateListener listener : listeners)
         {
@@ -661,7 +813,7 @@ public class WebSocketService
         }
     }
 
-    protected void notifyOnVersionMismatch(float version)
+    protected void notifyOnVersionMismatch(final float version)
     {
         for (RemoteUpdateListener listener : listeners)
         {

@@ -20,8 +20,8 @@ import android.widget.TextView;
 import com.swooby.obsremote.OBSRemoteApplication;
 import com.swooby.obsremote.R;
 import com.swooby.obsremote.RemoteUpdateListener;
-import com.swooby.obsremote.WebSocketService;
-import com.swooby.obsremote.WebSocketService.LocalBinder;
+import com.swooby.obsremote.OBSRemoteService;
+import com.swooby.obsremote.OBSRemoteService.LocalBinder;
 import com.swooby.obsremote.messages.util.Source;
 
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public class Splash
 
     private   boolean          busy;
     protected boolean          authRequired;
-    public    WebSocketService service;
+    public    OBSRemoteService service;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -107,7 +107,7 @@ public class Splash
     {
         super.onStart();
         /* Startup the service */
-        Intent intent = new Intent(this, WebSocketService.class);
+        Intent intent = new Intent(this, OBSRemoteService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
@@ -301,7 +301,7 @@ public class Splash
 
         // 2. Chain together various setter methods to set the dialog characteristics
         builder.setMessage(
-                "The App Version (" + WebSocketService.appVersion + ") does not match the plugin version (" + version +
+                "The App Version (" + OBSRemoteService.appVersion + ") does not match the plugin version (" + version +
                 ")")
                 .setTitle(R.string.versionmismatch);
 

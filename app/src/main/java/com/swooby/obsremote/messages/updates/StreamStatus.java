@@ -1,6 +1,6 @@
 package com.swooby.obsremote.messages.updates;
 
-import com.swooby.obsremote.WebSocketService;
+import com.swooby.obsremote.OBSRemoteService;
 import com.google.gson.annotations.SerializedName;
 
 public class StreamStatus extends Update
@@ -27,7 +27,7 @@ public class StreamStatus extends Update
     public int bytesPerSecond;
     
     @Override
-    public void dispatchUpdate(WebSocketService serv)
+    public void dispatchUpdate(OBSRemoteService serv)
     {
         serv.notifyStreamStatusUpdate(totalStreamTime, fps, strain, numDroppedFrames, numTotalFrames, bytesPerSecond);
     }

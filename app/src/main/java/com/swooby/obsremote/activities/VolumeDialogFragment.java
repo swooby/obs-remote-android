@@ -20,7 +20,7 @@ import android.widget.RelativeLayout;
 import com.swooby.obsremote.OBSRemoteApplication;
 import com.swooby.obsremote.R;
 import com.swooby.obsremote.RemoteUpdateListener;
-import com.swooby.obsremote.WebSocketService;
+import com.swooby.obsremote.OBSRemoteService;
 import com.swooby.obsremote.messages.ResponseHandler;
 import com.swooby.obsremote.messages.requests.GetVolumes;
 import com.swooby.obsremote.messages.requests.SetVolume;
@@ -38,9 +38,9 @@ public class VolumeDialogFragment
     private static final String TAG = "VolumeDialogFragment";
 
     private View             dialogView;
-    public  WebSocketService service;
+    public  OBSRemoteService service;
 
-    public static void startDialog(FragmentActivity fragAct, WebSocketService s)
+    public static void startDialog(FragmentActivity fragAct, OBSRemoteService s)
     {
         VolumeDialogFragment frag = new VolumeDialogFragment();
         frag.service = s;

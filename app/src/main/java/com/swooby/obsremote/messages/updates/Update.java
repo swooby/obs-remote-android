@@ -1,6 +1,6 @@
 package com.swooby.obsremote.messages.updates;
 
-import com.swooby.obsremote.WebSocketService;
+import com.swooby.obsremote.OBSRemoteService;
 import com.swooby.obsremote.messages.IncomingMessage;
 import com.google.gson.annotations.SerializedName;
 
@@ -20,6 +20,6 @@ public abstract class Update implements IncomingMessage
         return true;
     }
     
-    public abstract void dispatchUpdate(WebSocketService serv);
+    public abstract void dispatchUpdate(OBSRemoteService serv);
     
 }
